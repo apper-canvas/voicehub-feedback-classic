@@ -1,19 +1,20 @@
-import { useState, useEffect } from 'react';
-import { toast } from 'react-toastify';
-import { format, startOfMonth, endOfMonth, eachMonthOfInterval, addMonths } from 'date-fns';
-import Loading from '@/components/ui/Loading';
-import Error from '@/components/ui/Error';
-import Empty from '@/components/ui/Empty';
-import Button from '@/components/atoms/Button';
-import Badge from '@/components/atoms/Badge';
-import Select from '@/components/atoms/Select';
-import SearchBar from '@/components/molecules/SearchBar';
-import RoadmapCard from '@/components/molecules/RoadmapCard';
-import KanbanBoard from '@/components/molecules/KanbanBoard';
-import RoadmapItemModal from '@/components/organisms/RoadmapItemModal';
-import ApperIcon from '@/components/ApperIcon';
-import { roadmapService } from '@/services/api/roadmapService';
-import votesData from '@/services/mockData/votes.json';
+import React, { useCallback, useEffect, useState } from "react";
+import { toast } from "react-toastify";
+import { addMonths, eachMonthOfInterval, endOfMonth, format, startOfMonth } from "date-fns";
+import { roadmapService } from "@/services/api/roadmapService";
+import { voteService } from "@/services/api/voteService";
+import { useSelector } from "react-redux";
+import ApperIcon from "@/components/ApperIcon";
+import RoadmapItemModal from "@/components/organisms/RoadmapItemModal";
+import Button from "@/components/atoms/Button";
+import Select from "@/components/atoms/Select";
+import Badge from "@/components/atoms/Badge";
+import RoadmapCard from "@/components/molecules/RoadmapCard";
+import KanbanBoard from "@/components/molecules/KanbanBoard";
+import SearchBar from "@/components/molecules/SearchBar";
+import Loading from "@/components/ui/Loading";
+import Error from "@/components/ui/Error";
+import Empty from "@/components/ui/Empty";
 
 const RoadmapPage = () => {
 const [roadmapItems, setRoadmapItems] = useState([]);
@@ -60,8 +61,8 @@ useEffect(() => {
         aVal = parseFloat(aVal) || 0;
         bVal = parseFloat(bVal) || 0;
       } else if (sortField === 'votes') {
-        aVal = calculateVotes(a.Id);
-        bVal = calculateVotes(b.Id);
+aVal = voteCounts[a.Id] || 0;
+        bVal = voteCounts[b.Id] || 0;
       } else if (typeof aVal === 'string') {
         aVal = aVal.toLowerCase();
         bVal = bVal.toLowerCase();
@@ -84,9 +85,62 @@ useEffect(() => {
     }
   };
 
-  const calculateVotes = (itemId) => {
-    return votesData.filter(vote => vote.postId === itemId).length;
+const { user } = useSelector((state) => state.user);
+  const [voteCounts, setVoteCounts] = useState({});
+  const [isVoting, setIsVoting] = useState(false);
+
+  // Load vote counts for all visible items
+  const loadVoteCounts = useCallback(async () => {
+    if (!filteredItems || filteredItems.length === 0) return;
+
+    try {
+      const counts = {};
+      await Promise.all(
+        filteredItems.map(async (item) => {
+          const count = await voteService.getVoteCountByPostId(item.Id);
+          counts[item.Id] = count;
+        })
+      );
+      setVoteCounts(counts);
+    } catch (error) {
+      console.error('Error loading vote counts:', error);
+      toast.error('Failed to load vote counts');
+    }
+  }, [filteredItems]);
+
+  // Handle vote toggle
+  const handleVoteToggle = async (itemId) => {
+    if (!user) {
+      toast.error('Please sign in to vote');
+      return;
+    }
+
+    if (isVoting) return;
+
+    setIsVoting(true);
+    try {
+      const result = await voteService.toggleVote(itemId, user.userId);
+      
+      // Update local vote count
+      setVoteCounts(prev => ({
+        ...prev,
+        [itemId]: result.action === 'added' 
+          ? (prev[itemId] || 0) + 1 
+          : Math.max(0, (prev[itemId] || 0) - 1)
+      }));
+
+      toast.success(result.action === 'added' ? 'Vote added!' : 'Vote removed');
+    } catch (error) {
+      toast.error(error.message || 'Failed to update vote');
+    } finally {
+      setIsVoting(false);
+    }
   };
+
+  // Load vote counts when filtered items change
+  useEffect(() => {
+    loadVoteCounts();
+  }, [loadVoteCounts]);
 
   const loadRoadmapItems = async () => {
     try {
@@ -470,7 +524,7 @@ const groupedItems = groupItemsByStatus(filteredItems);
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {filteredItems.map((item) => {
-                  const voteCount = calculateVotes(item.Id);
+const voteCount = voteCounts[item.Id] || 0;
                   const progressValue = parseFloat(item.progress) || 0;
                   
                   return (
@@ -516,9 +570,9 @@ const groupedItems = groupItemsByStatus(filteredItems);
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
+<div className="flex items-center gap-2">
                           <ApperIcon name="ThumbsUp" size={16} className="text-gray-400" />
-                          <span className="text-sm font-medium text-gray-700">{voteCount}</span>
+                          <span className="text-sm font-medium text-gray-700">{voteCounts[selectedItem?.Id] || 0}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
