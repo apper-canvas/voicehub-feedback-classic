@@ -5,16 +5,16 @@ import { toast } from "react-toastify";
 import Button from "@/components/atoms/Button";
 import SearchBar from "@/components/molecules/SearchBar";
 import ApperIcon from "@/components/ApperIcon";
-
+import { useAuth } from "@/layouts/Root";
 const Header = () => {
-  const navigate = useNavigate();
+const navigate = useNavigate();
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
+  const { logout } = useAuth();
 
   const isOnBoardsPage = location.pathname === "/";
   const isOnBoardDetailPage = location.pathname.startsWith("/boards/");
   const isOnPostDetailPage = location.pathname.startsWith("/posts/");
-
   const handleSearch = (query) => {
     setSearchQuery(query);
     if (query.trim()) {
@@ -134,16 +134,15 @@ const getPageDescription = () => {
             </div>
 
             {/* User Menu */}
-            <div className="relative">
+<div className="relative">
               <Button
                 variant="ghost"
                 size="md"
-                onClick={() => toast.info("User menu coming soon")}
-                className="p-2"
+                onClick={logout}
+                className="flex items-center gap-2 px-4"
               >
-                <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                  U
-                </div>
+                <ApperIcon name="LogOut" size={18} />
+                <span className="text-sm font-medium">Logout</span>
               </Button>
             </div>
           </div>

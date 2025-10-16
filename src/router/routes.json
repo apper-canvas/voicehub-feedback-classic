@@ -1,0 +1,165 @@
+{
+  "/": {
+    "allow": {
+      "when": {
+        "conditions": [
+          {
+            "label": "Homepage is public",
+            "rule": "public"
+          }
+        ]
+      }
+    }
+  },
+  "/roadmap": {
+    "allow": {
+      "when": {
+        "conditions": [
+          {
+            "label": "Roadmap is public",
+            "rule": "public"
+          }
+        ]
+      }
+    }
+  },
+  "/changelog": {
+    "allow": {
+      "when": {
+        "conditions": [
+          {
+            "label": "Changelog is public",
+            "rule": "public"
+          }
+        ]
+      }
+    }
+  },
+  "/changelog/*": {
+    "allow": {
+      "when": {
+        "conditions": [
+          {
+            "label": "Changelog detail is public",
+            "rule": "public"
+          }
+        ]
+      }
+    }
+  },
+  "/boards/:boardId": {
+    "allow": {
+      "when": {
+        "conditions": [
+          {
+            "label": "Board detail is public",
+            "rule": "public"
+          }
+        ]
+      }
+    }
+  },
+  "/posts/:postId": {
+    "allow": {
+      "when": {
+        "conditions": [
+          {
+            "label": "Post detail is public",
+            "rule": "public"
+          }
+        ]
+      }
+    }
+  },
+  "/admin/*": {
+    "allow": {
+      "when": {
+        "conditions": [
+          {
+            "label": "Admin routes require authentication",
+            "rule": "authenticated"
+          }
+        ]
+      },
+      "redirectOnDeny": "/login"
+    }
+  },
+  "/login": {
+    "allow": {
+      "when": {
+        "conditions": [
+          {
+            "label": "Login page is public",
+            "rule": "public"
+          }
+        ]
+      },
+      "excludeRedirectQuery": true
+    }
+  },
+  "/signup": {
+    "allow": {
+      "when": {
+        "conditions": [
+          {
+            "label": "Signup page is public",
+            "rule": "public"
+          }
+        ]
+      },
+      "excludeRedirectQuery": true
+    }
+  },
+  "/callback": {
+    "allow": {
+      "when": {
+        "conditions": [
+          {
+            "label": "Callback page is public",
+            "rule": "public"
+          }
+        ]
+      },
+      "excludeRedirectQuery": true
+    }
+  },
+  "/error": {
+    "allow": {
+      "when": {
+        "conditions": [
+          {
+            "label": "Error page is public",
+            "rule": "public"
+          }
+        ]
+      },
+      "excludeRedirectQuery": true
+    }
+  },
+  "/prompt-password/*": {
+    "allow": {
+      "when": {
+        "conditions": [
+          {
+            "label": "Password prompt is public",
+            "rule": "public"
+          }
+        ]
+      },
+      "excludeRedirectQuery": true
+    }
+  },
+  "/reset-password/*": {
+    "allow": {
+      "when": {
+        "conditions": [
+          {
+            "label": "Password reset is public",
+            "rule": "public"
+          }
+        ]
+      },
+      "excludeRedirectQuery": true
+    }
+  }
+}

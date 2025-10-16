@@ -16,7 +16,7 @@ const BoardsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const loadBoards = async () => {
+const loadBoards = async () => {
     try {
       setLoading(true);
       setError("");
@@ -45,9 +45,9 @@ const BoardsPage = () => {
   useEffect(() => {
     // Filter boards based on search query
     if (searchQuery.trim()) {
-      const filtered = boards.filter(board => 
-        board.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        board.description.toLowerCase().includes(searchQuery.toLowerCase())
+const filtered = boards.filter(board => 
+        board.name_c?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        board.description_c?.toLowerCase().includes(searchQuery.toLowerCase())
       );
       setFilteredBoards(filtered);
     } else {
@@ -146,8 +146,8 @@ const BoardsPage = () => {
               <span className="text-white font-bold text-xl">💬</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">
-                {boards.reduce((sum, board) => sum + (board.postCount || 0), 0)}
+<p className="text-2xl font-bold text-gray-900">
+                {boards.reduce((sum, board) => sum + (board.post_count_c || 0), 0)}
               </p>
               <p className="text-gray-600">Total Posts</p>
             </div>
@@ -160,8 +160,8 @@ const BoardsPage = () => {
               <span className="text-white font-bold text-xl">👥</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">
-                {boards.reduce((sum, board) => sum + (board.memberCount || 0), 0)}
+<p className="text-2xl font-bold text-gray-900">
+                {boards.reduce((sum, board) => sum + (board.member_count_c || 0), 0)}
               </p>
               <p className="text-gray-600">Contributors</p>
             </div>
