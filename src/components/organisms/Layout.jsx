@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
-import Sidebar from "@/components/organisms/Sidebar";
-import Header from "@/components/organisms/Header";
-import ChangelogWidget from "@/components/molecules/ChangelogWidget";
-import ChangelogWidgetModal from "@/components/molecules/ChangelogWidgetModal";
 import { changelogService } from "@/services/api/changelogService";
 import { getViewedChangelogIds, markAllAsViewed } from "@/utils/changelogStorage";
+import Sidebar from "@/components/organisms/Sidebar";
+import Header from "@/components/organisms/Header";
+import ChangelogWidgetModal from "@/components/molecules/ChangelogWidgetModal";
+import ChangelogWidget from "@/components/molecules/ChangelogWidget";
 
 const Layout = () => {
   const [showChangelogModal, setShowChangelogModal] = useState(false);
