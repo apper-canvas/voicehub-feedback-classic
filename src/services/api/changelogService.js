@@ -1,8 +1,57 @@
-import { toast } from "react-toastify";
-import React from "react";
-import { getApperClient } from "@/services/apperClient";
-import Error from "@/components/ui/Error";
+import { toast } from 'react-toastify'
+import React from 'react'
+import { getApperClient } from '@/services/apperClient'
+import Error from '@/components/ui/Error'
 
+// Fetch latest published changelogs
+export const getLatestPublished = async (limit = 5) => {
+  try {
+    const apperClient = getApperClient();
+    
+    const params = {
+      fields: [
+        {"field": {"Name": "Id"}},
+        {"field": {"Name": "title_c"}},
+        {"field": {"Name": "content_c"}},
+        {"field": {"Name": "version_c"}},
+        {"field": {"Name": "publishedDate_c"}},
+        {"field": {"Name": "tags_c"}},
+        {"field": {"Name": "isPublished_c"}}
+      ],
+      where: [{
+        "FieldName": "isPublished_c",
+        "Operator": "ExactMatch",
+        "Values": [true]
+      }],
+      orderBy: [{
+        "fieldName": "publishedDate_c",
+        "sorttype": "DESC"
+      }],
+      pagingInfo: {
+        "limit": limit,
+        "offset": 0
+      }
+    };
+
+    const response = await apperClient.fetchRecords('changelog_c', params);
+
+    if (!response.success) {
+      console.error(response.message);
+      toast.error(response.message);
+      return [];
+    }
+
+    if (!response.data || response.data.length === 0) {
+      return [];
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching latest published changelogs:", error);
+    toast.error("Failed to load latest changelogs");
+    return [];
+  }
+};
 // Table name from database schema
 const TABLE_NAME = 'changelog_c';
 // Get all changelogs with optional filters
