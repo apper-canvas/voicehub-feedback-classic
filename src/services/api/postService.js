@@ -1,13 +1,17 @@
-import postsData from "@/services/mockData/posts.json";
-import votesData from "@/services/mockData/votes.json";
-import commentsData from "@/services/mockData/comments.json";
 import { boardService } from "@/services/api/boardService";
+import React from "react";
+import { getApperClient } from "@/services/apperClient";
+import Error from "@/components/ui/Error";
 
-let posts = [...postsData];
-let votes = [...votesData];
-let comments = [...commentsData];
+// ApperClient instance for database operations
+// Use getApperClient() to access database tables: post_c, vote_c, comment_c
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Mock data storage - in-memory arrays
+let posts = [];
+let comments = [];
+let votes = [];
 
 export const postService = {
   async getAll() {
