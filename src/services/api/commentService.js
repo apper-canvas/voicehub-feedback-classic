@@ -1,7 +1,8 @@
-import commentsData from "@/services/mockData/comments.json";
+import { create, update } from "@/services/api/widgetService";
 
-let comments = [...commentsData];
-let nextId = Math.max(...comments.map(c => c.Id), 0) + 1;
+// Initialize with empty comments array - data will be loaded from backend
+let comments = [];
+let nextId = 1;
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
