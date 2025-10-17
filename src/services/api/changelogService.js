@@ -1,352 +1,344 @@
-import changelogsData from '@/services/mockData/changelogs.json';
+import { toast } from "react-toastify";
+import React from "react";
+import { getApperClient } from "@/services/apperClient";
+import Error from "@/components/ui/Error";
 
-// Simulated delay for realistic API behavior
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-// Local state management
-let changelogs = [...changelogsData];
-let nextId = Math.max(...changelogs.map(item => item.Id)) + 1;
-
-// Category options with icons and colors
-export const CATEGORY_OPTIONS = [
-  { value: 'New Feature', label: 'New Feature', icon: 'Sparkles', color: 'blue' },
-  { value: 'Improvement', label: 'Improvement', icon: 'Zap', color: 'purple' },
-  { value: 'Bug Fix', label: 'Bug Fix', icon: 'Bug', color: 'red' },
-  { value: 'Technical', label: 'Technical', icon: 'Wrench', color: 'gray' },
-  { value: 'Breaking Change', label: 'Breaking Change', icon: 'AlertTriangle', color: 'orange' },
-  { value: 'Removed', label: 'Removed', icon: 'Trash2', color: 'brown' },
-  { value: 'Documentation', label: 'Documentation', icon: 'FileText', color: 'green' },
-  { value: 'Security', label: 'Security', icon: 'Shield', color: 'indigo' }
-];
-
-// Status options
-export const STATUS_OPTIONS = [
-  { value: 'draft', label: 'Draft' },
-  { value: 'scheduled', label: 'Scheduled' },
-  { value: 'published', label: 'Published' }
-];
-
-// Get all changelogs with optional filtering
-const getAll = async (filters = {}) => {
-  await delay(300);
-  
-  let filtered = [...changelogs];
-  
-  // Filter by status
-  if (filters.status && filters.status !== 'all') {
-    filtered = filtered.filter(item => item.status === filters.status);
-  }
-  
-  // Filter by categories (array of selected categories)
-  if (filters.categories && filters.categories.length > 0) {
-    filtered = filtered.filter(item => 
-      item.updates.some(update => 
-        filters.categories.includes(update.category)
-      )
-    );
-  }
-  
-  // Filter by date range
-  if (filters.startDate && filters.endDate) {
-    const start = new Date(filters.startDate);
-    const end = new Date(filters.endDate);
-    filtered = filtered.filter(item => {
-      const releaseDate = new Date(item.releaseDate);
-      return releaseDate >= start && releaseDate <= end;
-    });
-  }
-  
-  // Search in title, description, and update content
-  if (filters.search) {
-    const searchLower = filters.search.toLowerCase();
-    filtered = filtered.filter(item => 
-      item.title.toLowerCase().includes(searchLower) ||
-      item.description.toLowerCase().includes(searchLower) ||
-      item.version.toLowerCase().includes(searchLower) ||
-      item.updates.some(update => 
-        update.title.toLowerCase().includes(searchLower) ||
-        update.description.toLowerCase().includes(searchLower)
-      )
-    );
-  }
-  
-  // Sort by release date (descending - newest first)
-  filtered.sort((a, b) => new Date(b.releaseDate) - new Date(a.releaseDate));
-  
-  return filtered;
-};
-
-// Get latest published changelogs (for widget display)
-const getLatestPublished = async (limit = 5) => {
-  await delay(200);
-  
-  const published = changelogs
-    .filter(item => item.status === 'published')
-    .sort((a, b) => new Date(b.releaseDate) - new Date(a.releaseDate))
-    .slice(0, limit);
-  
-  return published;
-};
-
-// Get single changelog by ID
-const getById = async (id) => {
-  await delay(200);
-  const changelog = changelogs.find(item => item.Id === parseInt(id));
-  if (!changelog) {
-    throw new Error('Changelog not found');
-  }
-  return { ...changelog };
-};
-
-const getByVersion = async (version) => {
-  await delay(200);
-  // Convert URL-safe version format (v1-2-0) back to standard format (1.2.0)
-  const standardVersion = version.replace(/^v/, '').replace(/-/g, '.');
-  const changelog = changelogs.find(item => item.version === standardVersion);
-  if (!changelog) {
-    throw new Error('Changelog not found');
-  }
-  return { ...changelog };
-};
-
-const getAdjacentVersions = async (currentVersion) => {
-  await delay(200);
-  const sorted = [...changelogs]
-    .filter(c => c.status === 'published')
-    .sort((a, b) => new Date(b.releaseDate) - new Date(a.releaseDate));
-  
-  const currentIndex = sorted.findIndex(c => c.version === currentVersion);
-  
-  return {
-    previous: currentIndex > 0 ? sorted[currentIndex - 1] : null,
-    next: currentIndex < sorted.length - 1 ? sorted[currentIndex + 1] : null
-  };
-};
-
-const getRelatedChangelogs = async (changelogId, limit = 3) => {
-  await delay(200);
-  const current = changelogs.find(c => c.Id === changelogId);
-  if (!current) return [];
-  
-  const currentCategories = [...new Set(current.updates.map(u => u.category))];
-  
-  const related = changelogs
-    .filter(c => c.Id !== changelogId && c.status === 'published')
-    .map(c => {
-      const categories = [...new Set(c.updates.map(u => u.category))];
-      const matchingCategories = categories.filter(cat => currentCategories.includes(cat)).length;
-      const dateDiff = Math.abs(new Date(c.releaseDate) - new Date(current.releaseDate));
-      
-      return {
-        ...c,
-        score: matchingCategories * 1000 - dateDiff / (1000 * 60 * 60 * 24)
-      };
-    })
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit);
-  
-  return related;
-};
-
-const submitHelpfulFeedback = async (changelogId, wasHelpful) => {
-  await delay(300);
-  // In a real app, this would save to backend
-  // For now, just simulate the operation
-  return { success: true, wasHelpful };
-};
-
-// Get next version suggestion
-const getNextVersion = async () => {
-  await delay(100);
-  const publishedChangelogs = changelogs.filter(c => c.status === 'published');
-  if (publishedChangelogs.length === 0) {
-    return '1.0.0';
-  }
-  
-  // Get highest version and increment patch number
-  const versions = publishedChangelogs.map(c => c.version);
-  const latest = versions.sort((a, b) => {
-    const aParts = a.split('.').map(Number);
-    const bParts = b.split('.').map(Number);
-    for (let i = 0; i < 3; i++) {
-      if (aParts[i] !== bParts[i]) return bParts[i] - aParts[i];
+// Table name from database schema
+const TABLE_NAME = 'changelog_c';
+// Get all changelogs with optional filters
+export const getAllChangelogs = async (filters = {}) => {
+  try {
+    const apperClient = getApperClient();
+    
+    // Build where conditions based on filters
+    const whereConditions = [];
+    
+    if (filters.category && filters.category !== 'all') {
+      whereConditions.push({
+        FieldName: 'category_c',
+        Operator: 'EqualTo',
+        Values: [filters.category]
+      });
     }
-    return 0;
-  })[0];
-  
-  const parts = latest.split('.').map(Number);
-  parts[2]++; // Increment patch version
-  return parts.join('.');
+    
+    if (filters.version) {
+      whereConditions.push({
+        FieldName: 'version_c',
+        Operator: 'EqualTo',
+        Values: [filters.version]
+      });
+    }
+    
+    if (filters.tag) {
+      whereConditions.push({
+        FieldName: 'tags_c',
+        Operator: 'Contains',
+        Values: [filters.tag]
+      });
+    }
+    
+    if (filters.search) {
+      whereConditions.push({
+        FieldName: 'title_c',
+        Operator: 'Contains',
+        Values: [filters.search]
+      });
+    }
+    
+    const params = {
+      fields: [
+        { field: { Name: 'title_c' } },
+        { field: { Name: 'version_c' } },
+        { field: { Name: 'category_c' } },
+        { field: { Name: 'date_c' } },
+        { field: { Name: 'updates_c' } },
+        { field: { Name: 'tags_c' } },
+        { field: { Name: 'reactions_c' } },
+        { field: { Name: 'comments_c' } }
+      ],
+      where: whereConditions,
+      orderBy: [{ fieldName: 'date_c', sorttype: 'DESC' }],
+      pagingInfo: { limit: 100, offset: 0 }
+    };
+    
+    const response = await apperClient.fetchRecords(TABLE_NAME, params);
+    
+    if (!response.success) {
+      console.error(response.message);
+      toast.error(response.message);
+      return [];
+    }
+    
+    return response.data || [];
+  } catch (error) {
+    console.error('Error fetching changelogs:', error?.response?.data?.message || error);
+    toast.error('Failed to load changelogs');
+    return [];
+  }
 };
 
-// Create new changelog
-const create = async (changelogData) => {
-  await delay(400);
-  
-  const newChangelog = {
-    Id: nextId++,
-    version: changelogData.version,
-    title: changelogData.title,
-    description: changelogData.description,
-    releaseDate: changelogData.releaseDate || new Date().toISOString(),
-    status: changelogData.status || 'draft',
-    visibility: changelogData.visibility || 'public',
-    updates: changelogData.updates || [],
-    reactions: {
-      like: 0,
-      love: 0,
-      celebrate: 0
-    },
-    tags: changelogData.tags || [],
-    notifySubscribers: changelogData.notifySubscribers || false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  
-  changelogs.push(newChangelog);
-  return { ...newChangelog };
+// Get a changelog by ID
+export const getChangelogById = async (id) => {
+  try {
+    const apperClient = getApperClient();
+    
+    const params = {
+      fields: [
+        { field: { Name: 'title_c' } },
+        { field: { Name: 'version_c' } },
+        { field: { Name: 'category_c' } },
+        { field: { Name: 'date_c' } },
+        { field: { Name: 'updates_c' } },
+        { field: { Name: 'tags_c' } },
+        { field: { Name: 'reactions_c' } },
+        { field: { Name: 'comments_c' } }
+      ]
+    };
+    
+    const response = await apperClient.getRecordById(TABLE_NAME, parseInt(id), params);
+    
+    if (!response.success) {
+      console.error(response.message);
+      toast.error(response.message);
+      return null;
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching changelog ${id}:`, error?.response?.data?.message || error);
+    toast.error('Failed to load changelog');
+    return null;
+  }
 };
 
-// Update existing changelog
-const update = async (id, changelogData) => {
-  await delay(400);
+// Create a new changelog
+export const createChangelog = async (changelogData) => {
+  try {
+    const apperClient = getApperClient();
+    
+    // Only include Updateable fields
+    const params = {
+      records: [
+        {
+          title_c: changelogData.title,
+          version_c: changelogData.version,
+          category_c: changelogData.category,
+          date_c: changelogData.date || new Date().toISOString(),
+          updates_c: changelogData.updates || [],
+          tags_c: changelogData.tags || [],
+          reactions_c: JSON.stringify({ likes: 0, hearts: 0, celebrations: 0 }),
+          comments_c: JSON.stringify([])
+        }
+      ]
+    };
+    
+    const response = await apperClient.createRecord(TABLE_NAME, params);
+    
+    if (!response.success) {
+      console.error(response.message);
+      toast.error(response.message);
+      return null;
+    }
+    
+    if (response.results) {
+      const successful = response.results.filter(r => r.success);
+      const failed = response.results.filter(r => !r.success);
+      
+      if (failed.length > 0) {
+        console.error(`Failed to create ${failed.length} changelog:`, failed);
+        failed.forEach(record => {
+          record.errors?.forEach(error => toast.error(`${error.fieldLabel}: ${error}`));
+          if (record.message) toast.error(record.message);
+        });
+        return null;
+      }
+      
+      if (successful.length > 0) {
+        toast.success('Changelog created successfully');
+        return successful[0].data;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error creating changelog:', error?.response?.data?.message || error);
+    toast.error('Failed to create changelog');
+    return null;
+  }
+};
+
+// Update an existing changelog
+export const updateChangelog = async (id, updates) => {
+  try {
+    const apperClient = getApperClient();
+    
+    // Only include Updateable fields
+    const updateData = {
+      Id: parseInt(id)
+    };
+    
+    if (updates.title !== undefined) updateData.title_c = updates.title;
+    if (updates.version !== undefined) updateData.version_c = updates.version;
+    if (updates.category !== undefined) updateData.category_c = updates.category;
+    if (updates.date !== undefined) updateData.date_c = updates.date;
+    if (updates.updates !== undefined) updateData.updates_c = updates.updates;
+    if (updates.tags !== undefined) updateData.tags_c = updates.tags;
+    if (updates.reactions !== undefined) updateData.reactions_c = JSON.stringify(updates.reactions);
+    if (updates.comments !== undefined) updateData.comments_c = JSON.stringify(updates.comments);
+    
+    const params = {
+      records: [updateData]
+    };
+    
+    const response = await apperClient.updateRecord(TABLE_NAME, params);
+    
+    if (!response.success) {
+      console.error(response.message);
+      toast.error(response.message);
+      return null;
+    }
+    
+    if (response.results) {
+      const successful = response.results.filter(r => r.success);
+      const failed = response.results.filter(r => !r.success);
+      
+      if (failed.length > 0) {
+        console.error(`Failed to update ${failed.length} changelog:`, failed);
+        failed.forEach(record => {
+          record.errors?.forEach(error => toast.error(`${error.fieldLabel}: ${error}`));
+          if (record.message) toast.error(record.message);
+        });
+        return null;
+      }
+      
+      if (successful.length > 0) {
+        toast.success('Changelog updated successfully');
+        return successful[0].data;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error updating changelog:', error?.response?.data?.message || error);
+    toast.error('Failed to update changelog');
+    return null;
+  }
+};
+// Delete a changelog
+export const deleteChangelog = async (id) => {
+  try {
+    const apperClient = getApperClient();
+    
+    const params = {
+      RecordIds: [parseInt(id)]
+    };
+    
+    const response = await apperClient.deleteRecord(TABLE_NAME, params);
+    
+    if (!response.success) {
+      console.error(response.message);
+      toast.error(response.message);
+      return false;
+    }
+    
+    if (response.results) {
+      const successful = response.results.filter(r => r.success);
+      const failed = response.results.filter(r => !r.success);
+      
+      if (failed.length > 0) {
+        console.error(`Failed to delete ${failed.length} changelog:`, failed);
+        failed.forEach(record => {
+          if (record.message) toast.error(record.message);
+        });
+        return false;
+      }
+      
+      if (successful.length > 0) {
+        toast.success('Changelog deleted successfully');
+        return true;
+      }
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error deleting changelog:', error?.response?.data?.message || error);
+    toast.error('Failed to delete changelog');
+    return false;
+  }
+};
+
+// Get unique versions from all changelogs
+export const getVersions = async () => {
+  try {
+    const apperClient = getApperClient();
+    
+    const params = {
+      fields: [{ field: { Name: 'version_c' } }],
+      pagingInfo: { limit: 1000, offset: 0 }
+    };
+    
+    const response = await apperClient.fetchRecords(TABLE_NAME, params);
+    
+    if (!response.success) {
+      return [];
+    }
+    
+    const versions = [...new Set((response.data || []).map(item => item.version_c))];
+    return versions.sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+  } catch (error) {
+    console.error('Error fetching versions:', error);
+    return [];
+  }
+};
+
+// Get unique tags from all changelogs
+export const getTags = async () => {
+  try {
+    const apperClient = getApperClient();
+    
+    const params = {
+      fields: [{ field: { Name: 'tags_c' } }],
+      pagingInfo: { limit: 1000, offset: 0 }
+    };
+    
+    const response = await apperClient.fetchRecords(TABLE_NAME, params);
+    
+    if (!response.success) {
+      return [];
+    }
+    
+    const allTags = (response.data || []).flatMap(item => item.tags_c || []);
+    return [...new Set(allTags)].sort();
+  } catch (error) {
+    console.error('Error fetching tags:', error);
+    return [];
+  }
+};
+
+// Get next suggested version based on existing versions
+export const getSuggestedVersion = async () => {
+  const versions = await getVersions();
+  if (versions.length === 0) return '1.0.0';
   
-  const index = changelogs.findIndex(item => item.Id === parseInt(id));
-  if (index === -1) {
-    throw new Error('Changelog not found');
+  // Parse the latest version and increment patch number
+  const latest = versions[0];
+  const parts = latest.split('.');
+if (parts.length === 3) {
+    const [major, minor, patch] = parts.map(Number);
+    return `${major}.${minor}.${patch + 1}`;
   }
   
-  const updatedChangelog = {
-    ...changelogs[index],
-    ...changelogData,
-    Id: changelogs[index].Id,
-    reactions: changelogs[index].reactions, // Preserve reactions
-    createdAt: changelogs[index].createdAt,
-    updatedAt: new Date().toISOString()
-  };
-  
-  changelogs[index] = updatedChangelog;
-  return { ...updatedChangelog };
+  return '1.0.0';
 };
 
-// Delete changelog
-const deleteChangelog = async (id) => {
-  await delay(300);
-  
-  const index = changelogs.findIndex(item => item.Id === parseInt(id));
-  if (index === -1) {
-    throw new Error('Changelog not found');
-  }
-  
-  changelogs.splice(index, 1);
-  return { success: true };
-};
-
-// Toggle reaction on changelog
-const toggleReaction = async (id, reactionType) => {
-  await delay(200);
-  
-  const index = changelogs.findIndex(item => item.Id === parseInt(id));
-  if (index === -1) {
-    throw new Error('Changelog not found');
-  }
-  
-  if (!['like', 'love', 'celebrate'].includes(reactionType)) {
-    throw new Error('Invalid reaction type');
-  }
-  
-  // Simple toggle - increment or decrement
-  // In a real app, would track user reactions
-  const currentCount = changelogs[index].reactions[reactionType];
-  changelogs[index].reactions[reactionType] = Math.max(0, currentCount > 0 ? currentCount - 1 : currentCount + 1);
-  
-  changelogs[index].updatedAt = new Date().toISOString();
-  
-  return { ...changelogs[index] };
-};
-
-// Publish a draft changelog
-const publish = async (id) => {
-  await delay(300);
-  
-  const index = changelogs.findIndex(item => item.Id === parseInt(id));
-  if (index === -1) {
-    throw new Error('Changelog not found');
-  }
-  
-  changelogs[index].status = 'published';
-  changelogs[index].releaseDate = new Date().toISOString();
-  changelogs[index].updatedAt = new Date().toISOString();
-  
-  return { ...changelogs[index] };
-};
-
-// Duplicate a changelog
-const duplicate = async (id) => {
-  await delay(300);
-  
-  const original = changelogs.find(item => item.Id === parseInt(id));
-  if (!original) {
-    throw new Error('Changelog not found');
-  }
-  
-  const duplicated = {
-    ...original,
-    Id: nextId++,
-    version: `${original.version}-copy`,
-    title: `${original.title} (Copy)`,
-    status: 'draft',
-    reactions: {
-      like: 0,
-      love: 0,
-      celebrate: 0
-    },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  
-  changelogs.push(duplicated);
-  return { ...duplicated };
-};
-
-// Get statistics
-const getStats = async () => {
-  await delay(200);
-  
-  const published = changelogs.filter(c => c.status === 'published').length;
-  const drafts = changelogs.filter(c => c.status === 'draft').length;
-  const scheduled = changelogs.filter(c => c.status === 'scheduled').length;
-  const totalReactions = changelogs.reduce((sum, c) => 
-    sum + c.reactions.like + c.reactions.love + c.reactions.celebrate, 0
-  );
-  
-  return {
-    published,
-    drafts,
-    scheduled,
-    total: changelogs.length,
-    totalReactions
-  };
-};
-
+// Export service object
 export const changelogService = {
-  getAll,
-  getLatestPublished,
-  getById,
-  getByVersion,
-  getAdjacentVersions,
-  getRelatedChangelogs,
-  submitHelpfulFeedback,
-  getNextVersion,
-  create,
-  update,
-  delete: deleteChangelog,
-  toggleReaction,
-  publish,
-  duplicate,
-  getStats,
-  CATEGORY_OPTIONS,
-  STATUS_OPTIONS
+  getAllChangelogs,
+  getChangelogById,
+  createChangelog,
+  updateChangelog,
+  deleteChangelog,
+  getVersions,
+  getTags,
+  getSuggestedVersion
 };
