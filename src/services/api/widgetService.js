@@ -1,242 +1,211 @@
-import widgetConfigsData from "@/services/mockData/widgetConfigs.json";
+import { getApperClient } from "@/services/apperClient";
 
-let widgetConfigs = [...widgetConfigsData];
+const TABLE_NAME = 'widget_config_c';
 
+// Utility function for realistic API delay
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-export const widgetService = {
-  async getAll() {
-    await delay(200);
-    return [...widgetConfigs];
-  },
-
-  async getById(id) {
-    await delay(200);
-    const config = widgetConfigs.find(w => w.Id === parseInt(id));
-    if (!config) {
-      throw new Error("Widget configuration not found");
-    }
-    return { ...config };
-  },
-
-  async create(configData) {
-    await delay(400);
-    const newConfig = {
-      ...configData,
-      Id: Math.max(...widgetConfigs.map(w => w.Id), 0) + 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+// Get all widget configurations
+export const getAll = async (boardId = null) => {
+  await delay(300);
+  try {
+    const apperClient = getApperClient();
+    
+    const params = {
+      fields: [
+        { field: { Name: "Id" } },
+        { field: { Name: "name_c" } },
+        { field: { Name: "type_c" } },
+        { field: { Name: "position_c" } },
+        { field: { Name: "settings_c" } },
+        { field: { Name: "is_active_c" } },
+        { field: { Name: "board_id_c" } }
+      ]
     };
-    
-    widgetConfigs.push(newConfig);
-    return { ...newConfig };
-  },
 
-  async update(id, configData) {
-    await delay(400);
-    const index = widgetConfigs.findIndex(w => w.Id === parseInt(id));
-    if (index === -1) {
-      throw new Error("Widget configuration not found");
-    }
-    
-    widgetConfigs[index] = {
-      ...widgetConfigs[index],
-      ...configData,
-      updatedAt: new Date().toISOString()
-    };
-    
-    return { ...widgetConfigs[index] };
-  },
-
-async delete(id) {
-    await delay(300);
-    const index = widgetConfigs.findIndex(w => w.Id === parseInt(id));
-    if (index === -1) {
-      throw new Error("Widget configuration not found");
-    }
-    
-    const deletedConfig = widgetConfigs.splice(index, 1)[0];
-    return { ...deletedConfig };
-  },
-
-async getAnalytics(timePeriod = "30d") {
-    await delay(300);
-    
-    // Generate realistic analytics data based on time period
-    const daysMap = { "7d": 7, "30d": 30, "90d": 90, "all": 365 };
-    const days = daysMap[timePeriod] || 30;
-    
-    const installations = Math.floor(Math.random() * 500) + 100;
-    const submissions = Math.floor(installations * (Math.random() * 0.15 + 0.05)); // 5-20% conversion
-    const conversionRate = ((submissions / installations) * 100).toFixed(2);
-    
-    // Generate time series data for charts
-    const installationTrend = [];
-    const submissionTrend = [];
-    const dates = [];
-    
-    for (let i = days; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      dates.push(date.toISOString().split('T')[0]);
-      
-      installationTrend.push(Math.floor(Math.random() * 20) + 5);
-      submissionTrend.push(Math.floor(Math.random() * 5) + 1);
-    }
-    
-    // Generate popular pages data
-    const pages = [
-      { url: "/pricing", views: Math.floor(Math.random() * 1000) + 500 },
-      { url: "/features", views: Math.floor(Math.random() * 800) + 400 },
-      { url: "/", views: Math.floor(Math.random() * 1500) + 800 },
-      { url: "/contact", views: Math.floor(Math.random() * 600) + 300 },
-      { url: "/about", views: Math.floor(Math.random() * 500) + 200 }
-    ];
-    
-    const totalViews = pages.reduce((sum, page) => sum + page.views, 0);
-    const popularPages = pages
-      .sort((a, b) => b.views - a.views)
-      .map(page => ({
-        url: page.url,
-        views: page.views,
-        percentage: ((page.views / totalViews) * 100).toFixed(1)
-      }));
-    
-    // Generate geographic distribution data
-    const countries = [
-      { country: "United States", users: Math.floor(Math.random() * 500) + 300 },
-      { country: "United Kingdom", users: Math.floor(Math.random() * 300) + 150 },
-      { country: "Canada", users: Math.floor(Math.random() * 200) + 100 },
-      { country: "Germany", users: Math.floor(Math.random() * 250) + 120 },
-      { country: "Australia", users: Math.floor(Math.random() * 180) + 80 },
-      { country: "France", users: Math.floor(Math.random() * 150) + 70 },
-      { country: "India", users: Math.floor(Math.random() * 400) + 200 },
-      { country: "Other", users: Math.floor(Math.random() * 300) + 150 }
-    ];
-    
-    const totalUsers = countries.reduce((sum, c) => sum + c.users, 0);
-    const geography = countries.map(c => ({
-      country: c.country,
-      users: c.users,
-      percentage: ((c.users / totalUsers) * 100).toFixed(1)
-    }));
-    
-    // Generate device breakdown data
-    const desktopPercentage = Math.floor(Math.random() * 20) + 50; // 50-70%
-    const mobilePercentage = Math.floor(Math.random() * 15) + 25; // 25-40%
-    const tabletPercentage = 100 - desktopPercentage - mobilePercentage;
-    
-    const devices = {
-      desktop: desktopPercentage,
-      mobile: mobilePercentage,
-      tablet: tabletPercentage
-    };
-    
-    return {
-      summary: {
-        totalInstallations: installations,
-        totalSubmissions: submissions,
-        conversionRate: parseFloat(conversionRate)
-      },
-      trends: {
-        dates,
-        installations: installationTrend,
-        submissions: submissionTrend
-      },
-      byWidget: widgetConfigs.map(config => ({
-        id: config.Id,
-        name: config.buttonText,
-        installations: Math.floor(Math.random() * 200) + 50,
-        submissions: Math.floor(Math.random() * 30) + 5,
-        conversionRate: (Math.random() * 15 + 5).toFixed(2)
-      })),
-      popularPages,
-      geography,
-      devices
-    };
-  },
-
-  async generateEmbedCode(config, framework = "html") {
-    await delay(100);
-    
-    const projectId = "YOUR_PROJECT_ID"; // Would be replaced with actual project ID
-    const apiKey = "YOUR_PUBLIC_API_KEY"; // Would be replaced with actual API key
-
-    if (framework === "html") {
-      return `<!-- Feedback Widget - Copy this code before closing </body> tag -->
-<script>
-  (function() {
-    var script = document.createElement('script');
-    script.src = 'https://cdn.yourapp.com/widget/v1/feedback.js';
-    script.async = true;
-    script.setAttribute('data-project-id', '${projectId}');
-    script.setAttribute('data-api-key', '${apiKey}');
-    script.setAttribute('data-position', '${config.position}');
-    script.setAttribute('data-color', '${config.buttonColor}');
-    script.setAttribute('data-text', '${config.buttonText}');
-    script.setAttribute('data-icon', '${config.iconName}');
-    script.setAttribute('data-size', '${config.size}');
-    document.body.appendChild(script);
-  })();
-</script>`;
+    // Add board filter if provided
+    if (boardId) {
+      params.where = [{
+        FieldName: "board_id_c",
+        Operator: "EqualTo",
+        Values: [parseInt(boardId)]
+      }];
     }
 
-    if (framework === "react") {
-      return `// Install: npm install @yourapp/feedback-widget
+    const response = await apperClient.fetchRecords(TABLE_NAME, params);
 
-import { FeedbackWidget } from '@yourapp/feedback-widget';
-
-function App() {
-  return (
-    <>
-      {/* Your app components */}
-      
-      <FeedbackWidget
-        projectId="${projectId}"
-        apiKey="${apiKey}"
-        position="${config.position}"
-        buttonColor="${config.buttonColor}"
-        buttonText="${config.buttonText}"
-        iconName="${config.iconName}"
-        size="${config.size}"
-      />
-    </>
-  );
-}
-
-export default App;`;
+    if (!response?.data?.length) {
+      return [];
     }
 
-    if (framework === "vue") {
-      return `<!-- Install: npm install @yourapp/feedback-widget -->
-
-<template>
-  <div id="app">
-    <!-- Your app components -->
-    
-    <FeedbackWidget
-      :project-id="'${projectId}'"
-      :api-key="'${apiKey}'"
-      :position="'${config.position}'"
-      :button-color="'${config.buttonColor}'"
-      :button-text="'${config.buttonText}'"
-      :icon-name="'${config.iconName}'"
-      :size="'${config.size}'"
-    />
-  </div>
-</template>
-
-<script>
-import { FeedbackWidget } from '@yourapp/feedback-widget';
-
-export default {
-  components: {
-    FeedbackWidget
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching widget configurations:", error?.response?.data?.message || error);
+    return [];
   }
 };
-</script>`;
+
+// Get widget configuration by ID
+export const getById = async (id) => {
+  await delay(300);
+  try {
+    const apperClient = getApperClient();
+    
+    const params = {
+      fields: [
+        { field: { Name: "Id" } },
+        { field: { Name: "name_c" } },
+        { field: { Name: "type_c" } },
+        { field: { Name: "position_c" } },
+        { field: { Name: "settings_c" } },
+        { field: { Name: "is_active_c" } },
+        { field: { Name: "board_id_c" } }
+      ]
+    };
+
+    const response = await apperClient.getRecordById(TABLE_NAME, parseInt(id), params);
+
+    if (!response?.data) {
+      return null;
     }
 
-    return "";
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching widget configuration ${id}:`, error?.response?.data?.message || error);
+    return null;
   }
+};
+
+// Create new widget configuration
+export const create = async (data) => {
+  await delay(300);
+  try {
+    const apperClient = getApperClient();
+
+    // Validate required fields
+    if (!data.name_c || !data.type_c) {
+      console.error("Missing required fields: name_c and type_c are required");
+      return null;
+    }
+
+    const params = {
+      records: [{
+        name_c: data.name_c,
+        type_c: data.type_c,
+        position_c: data.position_c || 0,
+        settings_c: data.settings_c || "{}",
+        is_active_c: data.is_active_c !== undefined ? data.is_active_c : true,
+        board_id_c: data.board_id_c ? parseInt(data.board_id_c) : null
+      }]
+    };
+
+    const response = await apperClient.createRecord(TABLE_NAME, params);
+
+    if (!response.success) {
+      console.error(response.message);
+      return null;
+    }
+
+    if (response.results) {
+      const successful = response.results.filter(r => r.success);
+      const failed = response.results.filter(r => !r.success);
+
+      if (failed.length > 0) {
+        console.error(`Failed to create widget configuration:`, failed);
+      }
+
+      return successful.length > 0 ? successful[0].data : null;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error creating widget configuration:", error?.response?.data?.message || error);
+    return null;
+  }
+};
+
+// Update widget configuration
+export const update = async (id, data) => {
+  await delay(300);
+  try {
+    const apperClient = getApperClient();
+
+    const params = {
+      records: [{
+        Id: parseInt(id),
+        ...(data.name_c !== undefined && { name_c: data.name_c }),
+        ...(data.type_c !== undefined && { type_c: data.type_c }),
+        ...(data.position_c !== undefined && { position_c: data.position_c }),
+        ...(data.settings_c !== undefined && { settings_c: data.settings_c }),
+        ...(data.is_active_c !== undefined && { is_active_c: data.is_active_c }),
+        ...(data.board_id_c !== undefined && { board_id_c: data.board_id_c ? parseInt(data.board_id_c) : null })
+      }]
+    };
+
+    const response = await apperClient.updateRecord(TABLE_NAME, params);
+
+    if (!response.success) {
+      console.error(response.message);
+      return null;
+    }
+
+    if (response.results) {
+      const successful = response.results.filter(r => r.success);
+      const failed = response.results.filter(r => !r.success);
+
+      if (failed.length > 0) {
+        console.error(`Failed to update widget configuration:`, failed);
+      }
+
+      return successful.length > 0 ? successful[0].data : null;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error updating widget configuration:", error?.response?.data?.message || error);
+    return null;
+  }
+};
+
+// Delete widget configuration
+export const deleteWidget = async (id) => {
+  await delay(300);
+  try {
+    const apperClient = getApperClient();
+
+    const params = {
+      RecordIds: [parseInt(id)]
+    };
+
+    const response = await apperClient.deleteRecord(TABLE_NAME, params);
+
+    if (!response.success) {
+      console.error(response.message);
+      return false;
+    }
+
+    if (response.results) {
+      const failed = response.results.filter(r => !r.success);
+
+      if (failed.length > 0) {
+        console.error(`Failed to delete widget configuration:`, failed);
+        return false;
+      }
+
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.error("Error deleting widget configuration:", error?.response?.data?.message || error);
+    return false;
+  }
+};
+
+export const widgetService = {
+  getAll,
+  getById,
+  create,
+  update,
+  delete: deleteWidget
 };
